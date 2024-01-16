@@ -1,170 +1,140 @@
-# TODO: Improve NEAT class
-# TODO: Add ability to click on individual cars and see their NN
-# TODO: Add control buttons
-# TODO: Configs
-# TODO: More settings
-# TODO: Visualize improvement over generations
-# TODO: Hyperparameter tuning
-# TODO: Clean up code, remove colormask function
-# TODO: Figure out starting angle
-# TODO: Make gif and add to github
-
 import pygame as pg
 import math
 
+import visual
+import config as cf
 from neat import NEAT, Layer
 from car import Car
 
-import config
-
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-LIGHT_GRAY = (238, 221, 130, 100)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
-BACKGROUND_COLOR = BLACK
-TEXT_COLOR = WHITE
-
-
-def color_mask(image, mask_color):
-    mask_image = image.convert()
-    mask_image.set_colorkey(mask_color)
-    mask = pg.mask.from_surface(mask_image)
-    return mask
-
-
-def generate_cars(neat):
-    cars = []
-    for species in neat.population:
-        for nn in species.members:
-            cars.append(Car(x0, y0, 90, nn, species.color))
-    return cars
-
-
 pg.init()
-pg.display.set_caption(config.WIN_TITLE)
-win = pg.display.set_mode((config.WIN_WIDTH, config.WIN_HEIGHT))
-
-# black track with white background and red starting pixel
-TRACK_IMAGE = pg.image.load(config.TRACK_IMAGE).convert_alpha()
+pg.display.set_caption(cf.WIN_TITLE)
+WIN = pg.display.set_mode((cf.WIN_WIDTH, cf.WIN_HEIGHT))
+TRACK_IMAGE = pg.image.load(cf.TRACK_IMAGE).convert_alpha()
 TRACK_WIDTH, TRACK_HEIGHT = TRACK_IMAGE.get_width(), TRACK_IMAGE.get_height()
-GUI_HEIGHT = config.WIN_HEIGHT - TRACK_HEIGHT
+GUI_HEIGHT = cf.WIN_HEIGHT - TRACK_HEIGHT
+
+# Load and process track.
 track_rect = TRACK_IMAGE.get_rect()
 track_surface = pg.Surface.convert_alpha(TRACK_IMAGE)
-TRACK_IMAGE.set_colorkey(WHITE)
-mask = color_mask(TRACK_IMAGE, WHITE)
+mask_image = TRACK_IMAGE.convert()
+mask_image.set_colorkey(visual.COLORS['white'])
+mask = pg.mask.from_surface(mask_image)
 
+# Find starting point and angle.
+red_pixels = []
 width, height = track_surface.get_width(), track_surface.get_height()
-# -- Set starting position at red pixels
 for x in range(width):
     for y in range(height):
         pixel_color = track_surface.get_at((x, y))
         red, green, blue = pixel_color[0:3]
         if red > 150 and green < 100 and blue < 100:
-            x0, y0 = x, y
-if not x0:
-    raise Exception("The track must have a red starting pixel")
+            red_pixels.append((x, y))
+if len(red_pixels) < 2:
+    raise Exception("The track must have at least 2 red starting pixels.")
+x0, y0 = red_pixels[len(red_pixels)//2]
+x1, y1, x2, y2 = red_pixels[0] + red_pixels[-1]
+start_angle = math.degrees(math.atan2(y2-y1, x2-x1))
 
-current_time = 0
+
+def generate_individuals():
+    """Generate and return a new set of individuals using the current neural
+    networks in the given neat instance.
+
+    Returns:
+        list: List of newly generated individuals.
+    """
+    new_individuals = []
+    for species in neat.population:
+        for nn in species.members:
+            new_individuals.append(Car(x0, y0, start_angle, nn, species.color))
+    return new_individuals
+
+
+time = 0
 clock = pg.time.Clock()
-simulation_length = config.SIMULATION
-
-neat = NEAT(config.NUM_INPUTS, config.NUM_OUTPUTS, config.POPULATION_SIZE)
-cars = generate_cars(neat)
-visualized = cars[0]
-
+time_limit = cf.START_TIME
 font = pg.font.Font(None, 36)
-fitnesses = [0]
+
+neat = NEAT()
+individuals = generate_individuals()
+selected, fitnesses = individuals[0], [0]
 
 running = True
 while running:
-    # -- Update:
     pg.display.flip()
-    win.fill(BACKGROUND_COLOR)
-    win.blit(mask.to_surface(), track_rect)
+    WIN.fill(visual.BACKGROUND_COLOR)
+    WIN.blit(mask.to_surface(), track_rect)
 
-    for car in cars:
-        car.update(mask, win)
+    for individual in individuals:
+        individual.update(mask, WIN)
 
     for event in pg.event.get():
         if event.type == pg.QUIT:
             running = False
         elif event.type == pg.MOUSEBUTTONDOWN:
             mouse_pos = pg.mouse.get_pos()
-            for car in cars:
-                if math.dist((car.x, car.y), mouse_pos) < config.CLICK_RADIUS:
-                    visualized = car
+            for ind in individuals:
+                if math.dist((ind.x, ind.y), mouse_pos) < cf.CLICK_RADIUS:
+                    selected = ind
                     break
 
-    # -- Display text:
-    general_text = [f"Time remaining: {(simulation_length-current_time)/1000}",
-                    f"Generation: {neat.generation}",
-                    f"Avg. fitness: {round(sum(fitnesses)/len(fitnesses))}",
-                    f"Median fitness: {round(fitnesses[len(fitnesses)//2])}",
-                    f"Max fitness: {round(max(fitnesses))}",
-                    f"Amount of species: {len(neat.population)}"]
-
-    general_pos = [(100, TRACK_HEIGHT+50*i)
-                   for i in range(len(general_text))]
+    # Display general text about the current state.
+    general_text = visual.get_general_text(
+        time_limit, time, neat.generation, fitnesses, neat.population)
+    general_pos = [(100, TRACK_HEIGHT+50*i) for i in range(len(general_text))]
     for i, text in enumerate(general_text):
-        win.blit(font.render(text, True, TEXT_COLOR), general_pos[i])
+        WIN.blit(font.render(text, True, visual.TEXT_COLOR), general_pos[i])
 
-    # -- Display neural network:
-    nn = visualized.nn
+    # Display the neural network of the selected individual:
+    if cf.SHOW_NN:
+        nn = selected.nn
+        pos = {}
+        nodes_placed = [0, 0, 0]
+        for id, node in nn.nodes.items():
+            layer = node.type.value
+            x = visual.PLOT_X + layer*visual.PLOT_LAYER_WIDTH
+            dy = visual.PLOT_HEIGHT/(nn.layer_size[layer]*2)
+            y = TRACK_HEIGHT + nodes_placed[layer]*dy + dy/2
+            pos[id] = (x, y)
 
-    pos = {}  # Positions of nodes on the screen
-    plot_x, plot_y = 600, TRACK_HEIGHT
-    dx, dy = 200, 30
-    plot_height = 400
+            # Display input and output values.
+            if node.type == Layer.INPUT:
+                text = f"{round(selected.inputs[nodes_placed[node.type.value]])}"
+                WIN.blit(font.render(text, True, visual.TEXT_COLOR), (x-50, y-12))
+            elif node.type == Layer.OUTPUT:
+                text = f"{round(selected.outputs[nodes_placed[node.type.value]])}"
+                WIN.blit(font.render(text, True, visual.TEXT_COLOR), (x+50, y-12))
 
-    nodes_placed = [0, 0, 0]
-    for id, node in nn.nodes.items():
-        layer = node.type.value
-        new_x = plot_x + layer*dx
-        dy = plot_height/(nn.layer_size[layer]*2)
-        new_y = plot_y + nodes_placed[layer]*dy + dy/2
+            nodes_placed[node.type.value] += 1
 
-        pos[id] = (new_x, new_y)
+        # Display edges:
+        for (from_, to), edge in nn.edges.items():
+            pg.draw.line(WIN, visual.COLORS['white'], pos[from_], pos[to])
 
-        if node.type == Layer.INPUT:
-            input_text = f"{round(visualized.inputs[nodes_placed[Layer.INPUT.value]])}"
-            x2, y2 = pos[id]
-            win.blit(font.render(input_text, True, TEXT_COLOR), (x2-50, y2))
-        elif node.type == Layer.OUTPUT:
-            output_text = f"{round(visualized.outputs[nodes_placed[Layer.OUTPUT.value]])}"
-            x2, y2 = pos[id]
-            win.blit(font.render(output_text, True, TEXT_COLOR), (x2+50, y2-10))
+        # Display nodes:
+        for id, node in nn.nodes.items():
+            pg.draw.circle(WIN, visual.COLORS['red'], pos[id], radius=10)
 
-        nodes_placed[node.type.value] += 1
+    # Display which individual is selected.
+    pg.draw.circle(WIN, selected.color, selected.get_center(), 30, 2)
 
-    for edge in nn.edges.values():
-        pg.draw.line(win, WHITE, pos[edge.from_node], pos[edge.to_node])
+    # Display information about the selected individual.
+    text = visual.get_selected_text(selected)
+    selected_pos = [(1300, TRACK_HEIGHT+50*i) for i in range(len(text))]
+    for i, line in enumerate(text):
+        WIN.blit(font.render(line, True, visual.TEXT_COLOR), selected_pos[i])
 
-    for id, node in nn.nodes.items():
-        pg.draw.circle(win, RED, pos[id], radius=10)
+    # If done with current generation, evolve.
+    if time >= time_limit or all([ind.has_crashed for ind in individuals]):
+        for nn in neat.get_individuals():
+            fitnesses.append(nn.fitness/(time/1000))
+        neat.evolve()
+        time_limit += cf.ADDED_TIME
+        individuals = generate_individuals()
+        selected = individuals[0]
+        time = 0
 
-    pg.draw.circle(win, BLUE, visualized.get_center(), radius=30, width=2)
-
-    selected_text = [f"Fitness: {visualized.nn.fitness}",
-                     f"Generation: {neat.generation}",
-                     f"Avg. fitness: {round(sum(fitnesses)/len(fitnesses))}",
-                     f"Median fitness: {round(fitnesses[len(fitnesses)//2])}",
-                     f"Max fitness: {round(max(fitnesses))}",
-                     f"Amount of species: {len(neat.population)}"]
-
-    selected_pos = [(1300, TRACK_HEIGHT+50*i)
-                    for i in range(len(selected_text))]
-    for i, text in enumerate(selected_text):
-        win.blit(font.render(text, True, TEXT_COLOR), selected_pos[i])
-
-    # -- Perform evolution:
-    clock.tick(config.FPS)
-    current_time += clock.get_time()
-    if current_time >= simulation_length or all([car.has_crashed for car in cars]):
-        generation, fitnesses, population = neat.evolve(current_time)
-        simulation_length += 500
-        cars = generate_cars(neat)
-        visualized = cars[0]
-        current_time = 0
+    clock.tick(cf.FPS)
+    time += clock.get_time()
 
 pg.quit()
