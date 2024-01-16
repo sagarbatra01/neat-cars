@@ -23,7 +23,7 @@ def get_general_text(simulation_length, current_time, generation, fitnesses, pop
     Returns:
         list: List with strings to display.
     """
-    return [f"Time remaining: {(simulation_length-current_time)/1000}",
+    return [f"Time remaining: {max((simulation_length-current_time)/1000,0)}",
             f"Generation: {generation}",
             f"Avg. fitness: {round(sum(fitnesses)/len(fitnesses))}",
             f"Median fitness: {round(fitnesses[len(fitnesses)//2])}",

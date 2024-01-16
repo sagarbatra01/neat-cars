@@ -132,7 +132,7 @@ class Car:
             y += ray_direction[1] * cf.RAY_SPEED
             if cf.SHOW_RAYS:
                 pg.draw.circle(window, self.color, (x, y), radius=1)
-        return distance - math.ceil(self.width/2)
+        return max(0, distance - math.ceil(self.width/2))
 
     def recolor(self, color):
         """Fill all pixels of the surface with color, preserve transparency.
