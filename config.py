@@ -38,8 +38,8 @@ C3 = 1
 FPS = 60
 WIN_WIDTH, WIN_HEIGHT = 1800, 1000
 WIN_TITLE = "Car evolution with NEAT"
-TRACK_IMAGE = "track.png"
-CAR_IMAGE = "car.png"
+TRACK_IMAGE = "images/track.png"
+CAR_IMAGE = "images/car.png"
 CLICK_RADIUS = 35
 
 
