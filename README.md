@@ -35,7 +35,7 @@ In the file *config.py* the user can specify the desired configuration for the s
 
 ### 2. Track
 The user can either use the provided track or create their own as can be seen in the gif above. The track image to be used can be specified in *config.py*. 
-The image should be of PNG format. There is no fixed size requirement for the image but if made too large, parts of the image or menu can be outside the screen.
+The image should be of PNG format. There is no fixed size requirement for the image but if made too large, parts of the image or menu can be outside the screen. The track must be black with white background, and a red line must indicate the starting position and angle of the cars.
 
 ### 3. Running the program
 Run the *main.py* file:
