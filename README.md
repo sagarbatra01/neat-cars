@@ -46,10 +46,16 @@ Run the *main.py* file:
 
 ## How does it work?
 ### Driving
+During the driving phase, the cars drive using their neural network using a forward pass:
 
+![forward_pass](https://github.com/sagarbatra01/neat-cars/assets/87910501/2eeefc19-3e63-4c77-a599-59774c3880f6)
+
+As can be seen, the inputs to the neural network are the distances of rays from the car to the walls at different angles. Using a forward pass, 2 output values are calculated: the speed and the steering of the car. Note that the neural networks do not change during the driving phase.
 
 ### Selection
+The selection phase is the first part of the evolution phase.
 
+First each species is sorted based on its species score. The species score is calculated using a score function that the user can redefine in *config.py*. After this a percentage of the species are selected to survive. Out of these species, a percentage of individuals are selected. These percentages can also be modified in the configuration file.
 
 ### Reproduction
 
