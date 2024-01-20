@@ -58,10 +58,15 @@ The selection phase is the first part of the evolution phase.
 First each species is sorted based on its species score. The species score is calculated using a score function that the user can redefine in *config.py*. After this a percentage of the species are selected to survive. Out of these species, a percentage of individuals are selected. These percentages can also be modified in the configuration file.
 
 ### Reproduction
+To maintain the population size, the survivors must reproduce in order to replace the removed individuals. The reproduction works as following:
 
+1. Two random parents are selected from the survivors.
+2. Create a child neural network.
+3. Copy all of the nodes from the more fit parent to the child.
+4. Iterate over all of the edges in the more fit parent. If the edge exists in both parents, copy one of them randomly. Otherwise simply copy the one from the more fit parent.
 
 ### Mutation
-
+For evolution to work, there must also be some sort of randomness. 
 
 ### Speciation
 
