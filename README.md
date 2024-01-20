@@ -58,7 +58,7 @@ The selection phase is the first part of the evolution phase.
 First each species is sorted based on its species score. The species score is calculated using a score function that the user can redefine in *config.py*. After this a percentage of the species are selected to survive. Out of these species, a percentage of individuals are selected. These percentages can also be modified in the configuration file.
 
 ### Reproduction
-To maintain the population size, the survivors must reproduce in order to replace the removed individuals. The reproduction works as following:
+To maintain the population size, the survivors must reproduce in order to replace the individuals removed in the selection phase. The reproduction works as following:
 
 1. Two random parents are selected from the survivors.
 2. Create a child neural network.
@@ -66,7 +66,23 @@ To maintain the population size, the survivors must reproduce in order to replac
 4. Iterate over all of the edges in the more fit parent. If the edge exists in both parents, copy one of them randomly. Otherwise simply copy the one from the more fit parent.
 
 ### Mutation
-For evolution to work, there must also be some sort of randomness. 
+The new offspring then have a chance to mutate. This is very important as genetic variance is a prerequisite to evolutionary change. In the program there are three types of mutations:
+
+1. Add node: Randomly choose an edge to split in two parts, and insert a new node between these parts.
+2. Add edge: Randomly choose 2 nodes and add an edge between them if there is none.
+3. Update parameter: Randomly update the bias of a node or the weight of an edge.
+
+The probability of each mutation can be specified by the user in the *config.py* file.
 
 ### Speciation
+The final part of the evolution process is speciation. The new offspring are now assigned to a suiting species. What is then a suiting species? The method used in this program was compatibility distance: a measure of genetical difference in neural networks described in the paper [Efficient Evolution of Neural Networks](https://nn.cs.utexas.edu/pub-view.php?PubID=114) (2002) by Kenneth O. Stanley and Risto Miikkulainen.
+
+The compatibility distance $\delta$is described with the following equation:
+
+$$ \delta = {c_1 E \over N} + {c_2 D \over N} + {c_3 \bar W}$$
+
+where $E$ and $D$ are the number of excess and disjoint genes (edges) respectively and $\bar W$ is the average weight difference of matching genes.
+
+
+
 
