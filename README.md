@@ -77,7 +77,7 @@ The probability of each mutation can be specified by the user in the *config.py*
 ### Speciation
 The final part of the evolution process is speciation. The new offspring are now assigned to a suiting species. What is then a suiting species? The method used in this program was compatibility distance: a measure of genetical difference in neural networks described in the paper [Efficient Evolution of Neural Networks](https://nn.cs.utexas.edu/pub-view.php?PubID=114) (2002) by Kenneth O. Stanley and Risto Miikkulainen.
 
-The compatibility distance $\delta$is described with the following equation:
+The compatibility distance $\delta$ is described with the following equation:
 
 $$ \delta = {c_1 E \over N} + {c_2 D \over N} + {c_3 \bar W}$$
 
